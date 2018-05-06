@@ -16,8 +16,10 @@ srcLang = "detect"
 destLang = "none"
 audioDevice = -1
 volume = 1.0
+speed = 1.0
 
-lastAction = ""
+recentActions = []
+recentActionsLimit = 20
 
 
 toggleFullAudio = None
@@ -39,6 +41,7 @@ def main():
 
         showMenu(retMessage)
         option = input("Option: ")
+        print("")
 
         if(option == ""):
             confirm = input("\nDo you really want to exit?\nType <y> to confirm, type anything else to go back: ")
@@ -59,6 +62,10 @@ def main():
             retMessage = status()
         elif(option == "l"):
             retMessage = performLastAction()
+        elif(option == "r"):
+            retMessage = performRecentAction()
+        elif(option == "rr"):
+            retMessage = removeRecentAction()
         elif(option == "v"):
             retMessage = setPlaybackVolume()
         elif(option == "e"):
@@ -93,8 +100,10 @@ def playTTS():
             exited = True
             return ""
 
-        global lastAction
-        lastAction = "tts:({}->{}){}".format(srcLang, destLang, ttsText)
+        global recentActions		#[thirdLast, secondLast, last]
+        if(len(recentActions) == recentActionsLimit):
+            recentActions = recentActions[1:]
+        recentActions.append("tts:({}->{}){}".format(srcLang, destLang, ttsText))
         save()
 
         translator = Translator()
@@ -150,8 +159,10 @@ def playWav():
 
         print("\nPlaying file '{}'\nDuration: {} seconds\n\n".format(filename, round(duration, 3)))
 
-        global lastAction
-        lastAction = "wav:{}".format(filename)
+        global recentActions		#[thirdLast, secondLast, last]
+        if(len(recentActions) == recentActionsLimit):
+            recentActions = recentActions[1:]
+        recentActions.append("wav:{}".format(filename))
         save()
 
 
@@ -221,13 +232,18 @@ def stopPlayback():
 
 
 
-def performLastAction():
+def performLastAction(pos=1):       #pos = position -> 1 = last; 2 = second last; 3 = third last...
     global toggleTitle
+
+    if(len(recentActions) == 0):
+        return "There was no recent action!"
+    elif(pos > len(recentActions)):
+        return "Something weird happened here... (performLastAction -> pos check)"  #Should not happen normally
     
-    localAction = lastAction
+    localAction = recentActions[-pos]
     
     if(localAction.startswith("tts:")):#"tts:(de->en)Hallo das ist eine Nachricht"
-        localAction = lastAction[5:]
+        localAction = localAction[5:]
         
         fromLang = localAction[0:localAction.find("->")]
         toLang = localAction[localAction.find("->")+2:localAction.find(")")]
@@ -259,8 +275,86 @@ def performLastAction():
         
         toggleTitle = filename
 
-        return "Playing file '{}'\nDuration: {} seconds".format(filename, duration)
+        return "Playing file '{}'\nDuration: {} seconds".format(filename, round(duration, 3))
 
+
+
+def performRecentAction():
+    
+    if(len(recentActions) == 0):
+        return "There were no recent actions!"
+
+    print("--(r) Recent Actions--")
+    print("Enter the number of the recent action you want to perform (<Enter> to exit):\n")
+    print("Recent actions:")
+    
+    for i in range(1, len(recentActions)+1):
+        print("<{}> - {}".format(i, recentActions[-i]))
+
+    print("")
+
+    exited = False
+    
+    while exited == False:
+        strIn = input("\nAction number: ")
+
+        if(strIn == ""):
+            exited = True
+            return ""
+        else:
+            try:
+                num = int(strIn)
+                if(num < 1):
+                    raise Exception()
+            except:
+                print("{} is not a valid positive number!".format(strIn))
+            else:
+                if(num > len(recentActions)):
+                    print("{} is not the number of an action!".format(num))
+                else:
+                    return performLastAction(pos=num)
+
+
+
+
+def removeRecentAction():
+    
+    if(len(recentActions) == 0):
+        return "There were no recent actions!"
+
+    print("--(rr) Remove Recent Actions--")
+    print("Enter the number of the recent action you want to remove (<Enter> to exit):\n")
+    print("Recent actions:")
+    
+    for i in range(1, len(recentActions)+1):
+        print("<{}> - {}".format(i, recentActions[-i]))
+
+    print("")
+
+    exited = False
+    
+    while exited == False:
+        strIn = input("\nAction number: ")
+
+        if(strIn == ""):
+            exited = True
+            return ""
+        else:
+            try:
+                num = int(strIn)
+                if(num < 1):
+                    raise Exception()
+            except:
+                print("{} is not a valid positive number!".format(strIn))
+            else:
+                if(num > len(recentActions)):
+                    print("{} is not the number of an action!".format(num))
+                else:
+                    action = recentActions[-num]
+                    del(recentActions[-num])
+                    return "Successfully deleted '{}'".format(action)
+    
+    
 
 
 def setPlaybackVolume():
@@ -283,7 +377,7 @@ def setPlaybackVolume():
                 if(num < 0):
                     raise Exception()
             except:
-                print("{} is not a valid positive number")
+                print("{} is not a valid positive number".format(strIn))
             else:
                 volume = num
                 save()
@@ -319,7 +413,7 @@ def setPlaybackSpeed():
                 if(num < 0):
                     raise Exception()
             except:
-                print("{} is not a valid positive number")
+                print("{} is not a valid positive number".format(strIn))
             else:
                 if(toggleState == "playing"):
                     togglePause()
@@ -421,6 +515,8 @@ def status():
     else:
         return "What the f happened here?"
 
+		
+		
 def downloadYoutubeAudio():
     global srcLang
     
@@ -582,7 +678,11 @@ def setAudioDevice():
 
 
 def listSettings():
-    returnMsg = "srcLang = {}\ndestLang = {}\naudioDevice = {}\nlastAction = {}\nvolume = {}\nspeed = {}".format(srcLang, destLang, audioDevice, "-None-" if lastAction == "" else lastAction, volume, speed)
+    returnMsg = "srcLang = {}\ndestLang = {}\naudioDevice = {}\nvolume = {}\nspeed = {}".format(srcLang, destLang, audioDevice, volume, speed)
+    if(len(recentActions) > 0):
+        returnMsg += "\n\nRecent actions:\n"
+        for i in range(1, len(recentActions)+1):
+            returnMsg += "<{}> - {}\n".format(i, recentActions[-i])
     return returnMsg
 
 
@@ -596,6 +696,8 @@ def showMenu(postClearMsg=""):
     print("'s' - Stop current playback")
     print("'f' - Fastforward playback")
     print("'l' - Play last playback")
+    print("'r' - Play recent playback")
+    print("'rr' - Remove recent playback")
     print("'v' - Set playback volume")
     print("'e' - Set playback speed")
     print("'c' - Set src language")
@@ -618,7 +720,6 @@ def load():
         file.write("srcLang=detect\n")
         file.write("destLang=none\n")
         file.write("audioDevice=-1\n")
-        file.write("lastAction=-None-\n")
         file.write("volume=1.0\n")
         file.write("speed=1.0\n")
         file.close()
@@ -645,12 +746,9 @@ def load():
                 num = -1
             audioDevice = num
             
-        elif(varName == "lastAction"):
-            global lastAction
-            if(varVal == "-None-"):
-                lastAction = ""
-            else:
-                lastAction = varVal
+        elif(varName.startswith("recentAction")):
+            global recentActions
+            recentActions.append(varVal)
             
         elif(varName == "volume"):
             global volume
@@ -679,9 +777,14 @@ def save():
     file.write("srcLang={}\n".format(srcLang))
     file.write("destLang={}\n".format(destLang))
     file.write("audioDevice={}\n".format(audioDevice))
-    file.write("lastAction={}\n".format("-None-" if lastAction == "" else lastAction))
     file.write("volume={}\n".format(volume))
     file.write("speed={}\n".format(speed))
+	
+    i = 0
+    for string in recentActions:
+        file.write("recentActions{}={}\n".format(i, string))
+        i += 1
+        
     file.close()
         
 

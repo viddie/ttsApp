@@ -11,12 +11,13 @@
  
 ## Features of audio player:
 
- - Play any .wav or .mp3 file (.mp3 will be converted to .wav)
+ - Play any .wav or .mp3 file (.mp3 will be converted to .wav) that is in the same folder as the ttsApp.py
  - Play/Pause/Stop at any time
  - Set audio output device (Great in combination with Virtual Audio Cable & Voicemeeter Banana, so you are able to play audio and talk at the same time)
  - Set playback speed (Warning: No sound stretching, a faster speed means higher pitch!)
  - Set playback volume (Good for cancer mixes FeelsGoodMan Clap)
  - Download audio from a youtube video through the script and convert it to .wav (Warning: Download is slow af, not recommended for longer audio)
+ - Easily replay any of the last actions
  
  
 ## Installation
@@ -29,7 +30,7 @@ You need [python 3.0+](https://www.python.org/downloads/) as well as these depen
  - [googletrans](https://pypi.org/project/googletrans/)
  - [gtts](https://github.com/pndurette/gTTS)
  
-1. After downloading and installing python shift + rightclick on your desktop (or any folder) > "Open PowerShell here"
+1. After downloading and installing python, shift + rightclick on your desktop (or any folder) > "Open PowerShell here"
 2. Install the dependencies via pip:
 ```
 pip install pafy
